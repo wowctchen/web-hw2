@@ -142,7 +142,7 @@ export function Dashboard({ points }) {
     const loginForm = `
       <form id="loginForm" style="margin-top: 1rem;">
         <label for="email" style="display: block; font-weight: 500; margin-bottom: 0.25rem;">Email:</label>
-        <input type="email" id="email" name="email" required class="swal2-input" style="width: 100%; padding: 0.5rem; margin-bottom: 1rem;" placeholder="Enter your email">
+        <input type="email" id="email" name="email" required class="swal2-input" style="width: 80%; padding: 0.5rem; margin-bottom: 1rem;" placeholder="Enter your email">
         <button type="submit" class="swal2-confirm swal2-styled" style="width: 100%;">Submit</button>
       </form>
     `
