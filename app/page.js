@@ -1,103 +1,262 @@
-import Image from "next/image";
+'use client'
+import { Canvas, useFrame } from '@react-three/fiber'
+import {
+  RoundedBox,
+  CameraControls,
+  Environment,
+  useGLTF,
+  ContactShadows,
+  PerspectiveCamera,
+  KeyboardControls,
+  useKeyboardControls,
+  Box,
+} from '@react-three/drei'
+import { Suspense, useRef, useState } from 'react'
+import gsap from 'gsap'
+import Swal from 'sweetalert2'
+
+function ClawModel({ clawPos, isLowering, hasPrize }) {
+  const clawModel = useGLTF(`claw.glb`)
+  const clawModelRef = useRef()
+
+  useFrame((state) => {
+    if (clawModelRef.current) {
+      //用 foreach 尋找 clawModelRef 中，名稱為 claw 物件，並且將其 rotation.y 增加 0.01
+      clawModelRef.current.traverse((child) => {
+        if (child.name === 'claw') {
+          child.position.set(clawPos.x, clawPos.y, clawPos.z)
+        }
+
+        if (isLowering) return
+
+        if (child.name === 'clawBase') {
+          child.position.set(clawPos.x, clawPos.y + 0.15, clawPos.z)
+        }
+
+        if (child.name === 'track') {
+          child.position.set(0.011943, clawPos.y + 0.15, clawPos.z)
+        }
+
+        if (child.name === 'bear') {
+          child.visible = hasPrize
+        }
+      })
+    }
+  })
+
+  return (
+    <primitive
+      ref={clawModelRef}
+      object={clawModel.scene}
+      scale={[0.6, 0.6, 0.6]}
+      position={[0, 0, 0]}
+      rotation={[0, 0, 0]}
+    />
+  )
+}
+
+function Camera({
+  setClawPos,
+  boxRef,
+  clawPos,
+  isLowering,
+  setIsLowering,
+  hasPrize,
+  setHasPrize,
+}) {
+  const cameraRef = useRef()
+
+  //  [注意] useFrame and useKeyboardControls 都需要放在 Canvas 的子组件中
+
+  useFrame(() => {
+    if (cameraRef.current) {
+      cameraRef.current.lookAt(0, 1, 0)
+    }
+  })
+
+  const [, getKeys] = useKeyboardControls()
+
+  useFrame((state) => {
+    const { forward, backward, left, right, jump } = getKeys()
+    const speed = 0.01
+    const limitX = 0.4
+    const limitZ = 0.4
+
+    if (boxRef.current) {
+      if (!isLowering) {
+        if (forward) {
+          setClawPos({ x: clawPos.x, y: clawPos.y, z: clawPos.z - speed })
+        }
+        if (backward) {
+          setClawPos({ x: clawPos.x, y: clawPos.y, z: clawPos.z + speed })
+        }
+        if (left) {
+          setClawPos({ x: clawPos.x - speed, y: clawPos.y, z: clawPos.z })
+        }
+        if (right) {
+          setClawPos({ x: clawPos.x + speed, y: clawPos.y, z: clawPos.z })
+        }
+
+        if (clawPos.x > limitX) {
+          setClawPos({ x: limitX, y: clawPos.y, z: clawPos.z })
+        }
+        if (clawPos.x < -limitX) {
+          setClawPos({ x: -limitX, y: clawPos.y, z: clawPos.z })
+        }
+        if (clawPos.z > limitZ) {
+          setClawPos({ x: clawPos.x, y: clawPos.y, z: limitZ })
+        }
+        if (clawPos.z < -limitZ) {
+          setClawPos({ x: clawPos.x, y: clawPos.y, z: -limitZ })
+        }
+
+        if (jump) {
+          setHasPrize(false)
+          console.log('jump')
+          setIsLowering(true)
+
+          //setClawPos with gsap
+          console.log('down')
+
+          //gsap convet to timeline
+          // gsap.to(clawPos, { y: 2, duration: 2, onComplete: () => {
+
+          // } });
+
+          // 隨機變數判斷是否中獎
+          const random = Math.random()
+          const isWin = random < 0.5
+
+          // Has Prize 在這裡不會被更新，給同學練習
+          setHasPrize(isWin)
+
+          //gsap convet to timeline
+          gsap
+            .timeline()
+            .to(clawPos, { y: 2, duration: 2 })
+            .to(clawPos, { y: 2.7, duration: 3 })
+            .then(() => {
+              setIsLowering(false)
+              if (isWin) {
+                console.log('中獎')
+                Swal.fire({
+                  title: '中獎了',
+                  text: '恭喜你中獎了',
+                  icon: 'success',
+                  confirmButtonText: '確定',
+                })
+              } else {
+                console.log('沒中獎')
+                Swal.fire({
+                  title: '沒中獎',
+                  text: '再接再厲',
+                  icon: 'error',
+                  confirmButtonText: '確定',
+                })
+              }
+            })
+        }
+      }
+    }
+  })
+
+  return (
+    <PerspectiveCamera
+      ref={cameraRef}
+      makeDefault
+      position={[0, 1, 3]} // 3 ~ 6
+    />
+  )
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.js
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const boxRef = useRef()
+  const isHidden = true
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  const [clawPos, setClawPos] = useState({ x: -0.4, y: 2.7, z: 0.2 })
+  const [isLowering, setIsLowering] = useState(false)
+  const [hasPrize, setHasPrize] = useState(false)
+
+  return (
+    <div className="w-full h-screen">
+      <KeyboardControls
+        map={[
+          { name: 'forward', keys: ['ArrowUp', 'w', 'W'] },
+          { name: 'backward', keys: ['ArrowDown', 's', 'S'] },
+          { name: 'left', keys: ['ArrowLeft', 'a', 'A'] },
+          { name: 'right', keys: ['ArrowRight', 'd', 'D'] },
+          { name: 'jump', keys: ['Space'] },
+        ]}
+      >
+        <Canvas>
+          <ambientLight intensity={Math.PI / 2} />
+          <spotLight
+            position={[10, 10, 10]}
+            angle={0.15}
+            penumbra={1}
+            decay={0}
+            intensity={Math.PI}
+          />
+          <pointLight
+            position={[-10, -10, -10]}
+            decay={0}
+            intensity={Math.PI}
+          />
+
+          {!isHidden && (
+            <RoundedBox
+              args={[1, 1, 1]} // Width, height, depth. Default is [1, 1, 1]
+              radius={0.05} // Radius of the rounded corners. Default is 0.05
+              smoothness={4} // The number of curve segments. Default is 4
+              bevelSegments={4} // The number of bevel segments. Default is 4, setting it to 0 removes the bevel, as a result the texture is applied to the whole geometry.
+              creaseAngle={0.4} // Smooth normals everywhere except faces that meet at an angle greater than the crease angle
+            >
+              <meshPhongMaterial color="#f3f3f3" />
+            </RoundedBox>
+          )}
+
+          <Box ref={boxRef} args={[0.1, 0.1, 0.1]} position={[0, 0, 0]}>
+            <meshPhongMaterial color="#f3f3f3" />
+          </Box>
+
+          <Suspense fallback={null}>
+            <ClawModel
+              clawPos={clawPos}
+              isLowering={isLowering}
+              hasPrize={hasPrize}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+          </Suspense>
+
+          <Environment
+            background={true}
+            backgroundBlurriness={0.5}
+            backgroundIntensity={1}
+            environmentIntensity={1}
+            preset={'city'}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+
+          <ContactShadows
+            opacity={1}
+            scale={10}
+            blur={10}
+            far={10}
+            resolution={256}
+            color="#DDDDDD"
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
+
+          <Camera
+            boxRef={boxRef}
+            clawPos={clawPos}
+            setClawPos={setClawPos}
+            isLowering={isLowering}
+            setIsLowering={setIsLowering}
+            hasPrize={hasPrize}
+            setHasPrize={setHasPrize}
           />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          <CameraControls enablePan={false} enableZoom={false} />
+          <axesHelper args={[10]} />
+        </Canvas>
+      </KeyboardControls>
     </div>
-  );
+  )
 }
