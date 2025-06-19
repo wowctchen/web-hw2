@@ -11,49 +11,11 @@ import {
   useKeyboardControls,
   Box,
 } from '@react-three/drei'
-import { Suspense, useRef, useState } from 'react'
+import { Suspense, useRef, useState, useEffect } from 'react'
 import gsap from 'gsap'
 import Swal from 'sweetalert2'
-
-function ClawModel({ clawPos, isLowering, hasPrize }) {
-  const clawModel = useGLTF(`claw.glb`)
-  const clawModelRef = useRef()
-
-  useFrame((state) => {
-    if (clawModelRef.current) {
-      //用 foreach 尋找 clawModelRef 中，名稱為 claw 物件，並且將其 rotation.y 增加 0.01
-      clawModelRef.current.traverse((child) => {
-        if (child.name === 'claw') {
-          child.position.set(clawPos.x, clawPos.y, clawPos.z)
-        }
-
-        if (isLowering) return
-
-        if (child.name === 'clawBase') {
-          child.position.set(clawPos.x, clawPos.y + 0.15, clawPos.z)
-        }
-
-        if (child.name === 'track') {
-          child.position.set(0.011943, clawPos.y + 0.15, clawPos.z)
-        }
-
-        if (child.name === 'bear') {
-          child.visible = hasPrize
-        }
-      })
-    }
-  })
-
-  return (
-    <primitive
-      ref={clawModelRef}
-      object={clawModel.scene}
-      scale={[0.6, 0.6, 0.6]}
-      position={[0, 0, 0]}
-      rotation={[0, 0, 0]}
-    />
-  )
-}
+import { ClawModel } from './ClawModel'
+import { Dashboard } from './Dashboard'
 
 function Camera({
   setClawPos,
@@ -176,9 +138,42 @@ export default function Home() {
   const [clawPos, setClawPos] = useState({ x: -0.4, y: 2.7, z: 0.2 })
   const [isLowering, setIsLowering] = useState(false)
   const [hasPrize, setHasPrize] = useState(false)
+  const [points, setPoints] = useState(0)
+
+  useEffect(() => {
+    if (hasPrize) {
+      setTimeout(() => {
+        setPoints((prev) => prev + 1)
+      }, 5000)
+    }
+    setHasPrize(false)
+  }, [hasPrize])
+
+  const showRules = () => {
+    Swal.fire({
+      title: '遊戲規則',
+      text: '用 WASD 遊戲,空白鍵夾娃娃; 從右上角的按鈕登入可以查看排行榜',
+    })
+  }
 
   return (
-    <div className="w-full h-screen">
+    <div className="w-full h-screen relative">
+      <div className="absolute w-full top-4 px-4 z-10 flex flex-row gap-1">
+        <div className="flex flex-row">
+          <button
+            onClick={() => showRules()}
+            className="bg-white/80 text-black px-4 py-2 rounded shadow"
+          >
+            Rules
+          </button>
+          <div className=" bg-white/80 text-black px-4 py-2 rounded shadow">
+            🎯 Points: {points}
+          </div>
+        </div>
+        <div className="ml-auto">
+          <Dashboard points={points} />
+        </div>
+      </div>
       <KeyboardControls
         map={[
           { name: 'forward', keys: ['ArrowUp', 'w', 'W'] },
